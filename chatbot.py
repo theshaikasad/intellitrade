@@ -3707,12 +3707,12 @@ with st.sidebar:
                 load_session_into_state(selected_session_id)
                 st.rerun()
             
-            if st.button("Start New Session", width="stretch"):
+            if st.button("Start New Session", use_container_width=True):
                 new_session_id = create_chat_session(user["id"])
                 load_session_into_state(new_session_id)
                 st.rerun()
         
-        if st.button("Log out", width="stretch"):
+        if st.button("Log out", use_container_width=True):
             logout_user()
             st.success("Logged out successfully.")
             st.rerun()
@@ -3875,14 +3875,14 @@ if st.session_state.auth_user:
                             data=csv_data,
                             file_name=f"extracted_portfolio_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                             mime="text/csv",
-                            width="stretch"
+                            use_container_width=True
                         )
                     else:
                         st.warning("⚠️ No valid portfolio data could be extracted")
                 else:
                     st.warning("⚠️ No portfolio entries found in the images. Please ensure images are clear and contain portfolio data.")
 
-    if st.button("🚀 Load and Analyze Portfolio", type="primary", width="stretch"):
+    if st.button("🚀 Load and Analyze Portfolio", type="primary", use_container_width=True):
         extracted = st.session_state.get("extracted_portfolio")
         if extracted is not None and not extracted.empty:
             df_to_process = extracted
@@ -4163,7 +4163,7 @@ if st.session_state.auth_user:
                     "P&L": st.column_config.TextColumn("P&L"),
                 },
                 hide_index=True,
-                width="stretch",
+                use_container_width=True,
             )
 
         with news_tab:
