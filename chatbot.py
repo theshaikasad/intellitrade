@@ -31,6 +31,8 @@ from urllib.parse import quote
 
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+st.set_page_config(page_title="AI Financial Advisor", page_icon="📈", layout="wide")
+
 # Try to import NewsAPI
 try:
     from newsapi import NewsApiClient
@@ -2853,7 +2855,6 @@ def fetch_live_market_indices(force_refresh: bool = False) -> Dict[str, Dict[str
 # -------------------------
 # STREAMLIT UI
 # -------------------------
-st.set_page_config(page_title="AI Financial Advisor", page_icon="📈", layout="wide")
 
 # Custom CSS for better UI
 st.markdown("""
