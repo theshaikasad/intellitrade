@@ -895,7 +895,7 @@ def format_inr(amount):
 @st.cache_resource
 def initialize_clients():
     try:
-        hf_client = InferenceClient(api_key=HF_API_KEY)
+        hf_client = InferenceClient(token=HF_API_KEY)
         if NEWSAPI_AVAILABLE and NEWSAPI_KEY:
             news_client = NewsApiClient(api_key=NEWSAPI_KEY)
         else:
