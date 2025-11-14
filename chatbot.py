@@ -2723,11 +2723,12 @@ Remember: You’re guiding real people. Be friendly, transparent about your reas
 @st.cache_data(ttl=300)
 def fetch_live_market_indices(force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
     """Fetch live Indian market indices with SQLite caching and graceful fallbacks."""
+    # Indian index symbols with fallback options
     indices = {
-        "NIFTY 50": "^NSEI",
-        "SENSEX": "^BSESN",
-        "NIFTY Bank": "^NSEBANK",
-        "NIFTY IT": "^CNXIT",
+        "NIFTY 50": ["^NSEI", "NSEI.NS", "NIFTYBEES.NS"],
+        "SENSEX": ["^BSESN", "BSESN.NS"],
+        "NIFTY Bank": ["^NSEBANK", "NSEBANK.NS", "BANKBEES.NS"],
+        "NIFTY IT": ["^CNXIT", "CNXIT.NS", "ITBEES.NS"],
     }
 
     now = datetime.utcnow()
@@ -2786,40 +2787,50 @@ def fetch_live_market_indices(force_refresh: bool = False) -> Dict[str, Dict[str
     fresh_rows: List[Tuple[Any, ...]] = []
 
     for name, info in stale_indices.items():
-        symbol = info["symbol"]
+        symbol_list = info["symbol"] if isinstance(info["symbol"], list) else [info["symbol"]]
         previous = info.get("previous")
-        try:
-            ticker = yf.Ticker(symbol)
-            hist = ticker.history(period="2d")
-            if hist.empty:
-                raise ValueError("Empty history data")
+        fetched = False
+        
+        for symbol in symbol_list:
+            try:
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="2d")
+                if hist.empty:
+                    continue
 
-            current = _safe_float(hist["Close"].iloc[-1])
-            prev = (
-                _safe_float(hist["Close"].iloc[-2])
-                if len(hist) > 1
-                else current
-            )
-            if current is None or prev is None:
-                raise ValueError("Invalid price data")
-
-            change = current - prev
-            change_pct = (change / prev * 100.0) if prev else 0.0
-            entry_time = now
-
-            results[name] = _prepare_market_result(
-                current, change, change_pct, entry_time, False
-            )
-            fresh_rows.append(
-                (
-                    name,
-                    round(current, 6),
-                    round(change_pct, 6),
-                    entry_time.strftime("%Y-%m-%d %H:%M:%S"),
+                current = _safe_float(hist["Close"].iloc[-1])
+                prev = (
+                    _safe_float(hist["Close"].iloc[-2])
+                    if len(hist) > 1
+                    else current
                 )
-            )
-        except Exception as exc:
-            logger.error(f"Error fetching {name}: {exc}")
+                if current is None or prev is None:
+                    continue
+
+                change = current - prev
+                change_pct = (change / prev * 100.0) if prev else 0.0
+                entry_time = now
+
+                results[name] = _prepare_market_result(
+                    current, change, change_pct, entry_time, False
+                )
+                fresh_rows.append(
+                    (
+                        name,
+                        round(current, 6),
+                        round(change_pct, 6),
+                        entry_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    )
+                )
+                fetched = True
+                break
+            except Exception as exc:
+                logger.debug(f"Failed to fetch {name} with symbol {symbol}: {exc}")
+                continue
+        
+        if not fetched:
+            error_msg = f"Could not fetch {name} with any available symbol"
+            logger.error(f"Error fetching {name}: {error_msg}")
             if previous:
                 results[name] = _prepare_market_result(
                     previous.get("value"),
@@ -2827,11 +2838,11 @@ def fetch_live_market_indices(force_refresh: bool = False) -> Dict[str, Dict[str
                     previous.get("change_pct"),
                     previous.get("last_updated"),
                     True,
-                    error=str(exc),
+                    error=error_msg,
                 )
             else:
                 results[name] = _prepare_market_result(
-                    None, None, None, None, True, error=str(exc)
+                    None, None, None, None, True, error=error_msg
                 )
 
     if fresh_rows:
